@@ -8,8 +8,12 @@ dry_run=false
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 config_template="$repo_root/templates/follow-builders.config.json"
+prompt_template_dir="$repo_root/templates/follow-builders-prompts"
+digest_prompt_template="$prompt_template_dir/digest-intro.md"
 user_config_dir="$HOME/.follow-builders"
 user_config="$user_config_dir/config.json"
+user_prompt_dir="$user_config_dir/prompts"
+user_digest_prompt="$user_prompt_dir/digest-intro.md"
 
 log() {
   printf '[follow-builders bootstrap] %s\n' "$*"
@@ -76,6 +80,11 @@ if [ ! -f "$config_template" ]; then
   exit 1
 fi
 
+if [ ! -f "$digest_prompt_template" ]; then
+  printf 'Digest prompt template missing: %s\n' "$digest_prompt_template" >&2
+  exit 1
+fi
+
 if [ "$dry_run" = true ]; then
   log "Dry run: would run make setup in $repo_root"
 
@@ -87,12 +96,20 @@ if [ "$dry_run" = true ]; then
     log "Dry run: would create $user_config from $config_template"
   fi
 
+  if [ -f "$user_digest_prompt" ] && cmp -s "$digest_prompt_template" "$user_digest_prompt"; then
+    log "Dry run: existing $user_digest_prompt already matches the repository template"
+  elif [ -f "$user_digest_prompt" ]; then
+    log "Dry run: would back up existing $user_digest_prompt, then copy $digest_prompt_template"
+  else
+    log "Dry run: would create $user_digest_prompt from $digest_prompt_template"
+  fi
+
   if lark-cli config show 2>/dev/null | grep -q "$APP_ID"; then
     log "Dry run: lark-cli already shows expected appId $APP_ID"
     lark-cli im +messages-send \
       --as bot \
       --user-id "$RECEIVER_OPEN_ID" \
-      --text "Follow Builders restore dry-run" \
+      --markdown $'# Follow Builders Restore Dry Run\n\n2026-06-01 · Follow Builders\n\n---\n\n## 📌 今日速览\n\n- Feishu Markdown delivery target is configured.\n\n---\n\n🔗 **来源：**\nhttps://github.com/zarazhangrui/follow-builders' \
       --dry-run
   else
     log "Dry run: would initialize lark-cli with appId $APP_ID via appSecret stdin"
@@ -114,6 +131,15 @@ if [ -f "$user_config" ] && ! cmp -s "$config_template" "$user_config"; then
 fi
 cp "$config_template" "$user_config"
 log "Wrote $user_config"
+
+mkdir -p "$user_prompt_dir"
+if [ -f "$user_digest_prompt" ] && ! cmp -s "$digest_prompt_template" "$user_digest_prompt"; then
+  backup="$user_digest_prompt.backup.$(date +%Y%m%d%H%M%S)"
+  cp "$user_digest_prompt" "$backup"
+  log "Backed up existing digest prompt to $backup"
+fi
+cp "$digest_prompt_template" "$user_digest_prompt"
+log "Wrote $user_digest_prompt"
 
 cat <<EOF
 
@@ -168,4 +194,7 @@ Next step in Codex:
 
 Optional verification:
   bash scripts/verify-feishu-follow-builders.sh
+
+The Feishu daily-log layout is now installed at:
+  ~/.follow-builders/prompts/digest-intro.md
 EOF

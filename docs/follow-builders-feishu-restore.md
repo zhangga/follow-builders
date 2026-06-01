@@ -7,8 +7,8 @@ The restored flow is:
 ```text
 Codex Automation
   -> Follow Builders prepare-digest.js
-  -> Codex remixes the JSON into a Chinese digest
-  -> lark-cli sends it as 小强Bot
+  -> Codex remixes the JSON into a polished Chinese Markdown digest
+  -> lark-cli sends it as 小强Bot via Feishu Markdown
   -> Feishu DM to 张泽强
 ```
 
@@ -18,6 +18,7 @@ Safe to keep in this repository:
 
 - Follow Builders source and submodule setup commands.
 - `templates/follow-builders.config.json`, copied to `~/.follow-builders/config.json`.
+- `templates/follow-builders-prompts/digest-intro.md`, copied to `~/.follow-builders/prompts/digest-intro.md` so the Feishu daily-log layout, emoji section markers, dividers, and source-link style survive new computers.
 - `templates/codex-follow-builders-automation.prompt.md`, pasted into Codex to create the automation.
 - Bootstrap and verification scripts under `scripts/`.
 
@@ -70,6 +71,7 @@ Do not store these in git:
 
    - Run `make setup`.
    - Write `~/.follow-builders/config.json`.
+   - Write the custom Feishu daily-log prompt to `~/.follow-builders/prompts/digest-intro.md`.
    - Ask for the 小强Bot appSecret without echoing it.
    - Initialize `lark-cli` with appId `cli_aa9d2f96f8381cbd`.
    - Send a Feishu test message to `ou_1a698174d06fdc75f9f5567d41da0ac2`.
@@ -90,17 +92,28 @@ Do not store these in git:
    bash scripts/verify-feishu-follow-builders.sh
    ```
 
-   This checks local files, Node dependencies, `prepare-digest.js`, `lark-cli`, a Feishu dry-run send, and the automation prompt template.
+   This checks local files, Node dependencies, `prepare-digest.js`, `lark-cli`, a Feishu dry-run send, the automation prompt template, and the local active Codex automation prompt.
+   It also checks that `prepare-digest.js` is loading the repository-backed
+   `~/.follow-builders/prompts/digest-intro.md` daily-log prompt.
 
 ## Manual Smoke Test
 
-Use this when you want to confirm the bot can still send to you:
+Use this when you want to confirm the bot can still send plain text to you:
 
 ```bash
 lark-cli im +messages-send \
   --as bot \
   --user-id ou_1a698174d06fdc75f9f5567d41da0ac2 \
   --text "Follow Builders restore smoke test"
+```
+
+Use this when you want to confirm the visual Markdown path used by the daily digest:
+
+```bash
+lark-cli im +messages-send \
+  --as bot \
+  --user-id ou_1a698174d06fdc75f9f5567d41da0ac2 \
+  --markdown $'# AI Builders Digest\n\n2026-06-01 · Follow Builders\n\n---\n\n## 📌 今日速览\n\n- Markdown delivery is working.\n\n---\n\n## 🧵 X / Twitter\n\n1. **Restore Test**\n\n   **关键信号：** Feishu Markdown post rendering is working.\n\n   **为什么重要：** The daily digest can use visual section markers and dividers.\n\n   🔗 **来源：**\n   https://github.com/zarazhangrui/follow-builders\n\nGenerated through the Follow Builders skill: https://github.com/zarazhangrui/follow-builders'
 ```
 
 Use this to check the Follow Builders feed payload:
