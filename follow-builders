@@ -1,0 +1,68 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+command_name="${1:-help}"
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+submodule_path="$repo_root/submodules/zarazhangrui-follow-builders"
+scripts_path="$submodule_path/scripts"
+
+show_help() {
+  cat <<'EOF'
+Follow Builders shortcut
+
+Usage:
+  ./follow-builders update-submodule  Update/init the zarazhangrui follow-builders submodule
+  ./follow-builders npm-install       Run npm install under the submodule scripts directory
+  ./follow-builders setup             Update submodule, then run npm install
+  ./follow-builders help              Show this help
+EOF
+}
+
+require_command() {
+  local name="$1"
+
+  if ! command -v "$name" >/dev/null 2>&1; then
+    echo "Required command '$name' was not found in PATH." >&2
+    exit 1
+  fi
+}
+
+update_follow_builders_submodule() {
+  require_command git
+
+  git -C "$repo_root" submodule update --init --recursive submodules/zarazhangrui-follow-builders
+  git -C "$repo_root" submodule update --remote --merge submodules/zarazhangrui-follow-builders
+}
+
+install_follow_builders_dependencies() {
+  require_command npm
+
+  if [ ! -d "$scripts_path" ]; then
+    echo "Submodule scripts directory was not found: $scripts_path. Run './follow-builders update-submodule' first." >&2
+    exit 1
+  fi
+
+  (cd "$scripts_path" && npm install)
+}
+
+case "$command_name" in
+  help)
+    show_help
+    ;;
+  update-submodule)
+    update_follow_builders_submodule
+    ;;
+  npm-install)
+    install_follow_builders_dependencies
+    ;;
+  setup)
+    update_follow_builders_submodule
+    install_follow_builders_dependencies
+    ;;
+  *)
+    echo "Unknown command: $command_name" >&2
+    echo "" >&2
+    show_help >&2
+    exit 1
+    ;;
+esac
